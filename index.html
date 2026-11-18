@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>华语学堂: 台湾行 — Mandarin Journey RPG</title>
+
+  <!-- Google Fonts: Noto Sans SC, Noto Serif SC, Ma Shan Zheng -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@600;700;900&display=swap" rel="stylesheet">
+
+  <!-- Phaser 3 CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+
+  <!-- Hanzi Writer v3.5 CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
+
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app-root">
+    <!-- Phaser 3 Viewport -->
+    <div id="game-container"></div>
+
+    <!-- Top HUD & Mission Banner -->
+    <header class="game-hud" id="game-hud" style="display: none;">
+      <div class="hud-left">
+        <!-- Teacher / Demo Mode Dropdown -->
+        <button class="hud-btn" id="teacher-mode-btn" title="College Presentation Demo Controls">
+          🎓 <span>Demo / Teacher</span> ▾
+        </button>
+        <div class="teacher-dropdown-menu" id="teacher-dropdown">
+          <div class="teacher-item" id="demo-tp-ch1">⛩️ Teleport to Chapter 1</div>
+          <div class="teacher-item" id="demo-tp-ch2">🏮 Teleport to Chapter 2</div>
+          <div class="teacher-item" id="demo-tp-ch3">🌸 Teleport to Chapter 3</div>
+          <div class="teacher-divider"></div>
+          <div class="teacher-item" id="demo-auto-solve">✍️ Auto-Solve Notebook Box</div>
+          <div class="teacher-divider"></div>
+          <div class="teacher-item" id="demo-reset-save">🗑️ Clear Saved Progress</div>
+        </div>
+      </div>
+
+      <div class="hud-center">
+        <!-- Dynamic Mission / Guide Banner -->
+        <div class="mission-banner" id="mission-banner">
+          <span class="mission-tag">MISSION</span>
+          <span class="mission-text" id="mission-text">Walk to the Courtyard Gate and speak with Li Minghua.</span>
+        </div>
+      </div>
+
+      <div class="hud-right" style="display: flex; gap: 8px;">
+        <button class="hud-btn" id="sound-btn" title="Toggle Sound">
+          🔊 <span id="sound-label">Sound: ON</span>
+        </button>
+        <!-- Always-Accessible Glowing Codex Button -->
+        <button class="hud-btn codex-btn" id="codex-btn" title="Open Codex Dictionary & Grammar">
+          📖 <span>典籍 Codex</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- TITLE SCREEN OVERLAY -->
+    <div class="title-screen-overlay" id="title-screen">
+      <div class="title-card">
+        <div class="title-seal">台湾华语</div>
+        <h1 class="game-title-zh">华语学堂: 台湾行</h1>
+        <div class="game-title-pinyin">Huáyǔ Xuétáng: Táiwān Xíng</div>
+        <p class="game-title-en">A Story-Driven 2D Mandarin Learning Journey</p>
+
+        <div class="title-buttons">
+          <button class="btn-primary-action" id="btn-new-game">
+            <span>✨ NEW GAME</span>
+          </button>
+          <button class="btn-secondary-action" id="btn-load-game" disabled>
+            <span>📜 LOAD SAVED GAME</span>
+            <span class="save-summary-sub" id="save-summary-text">No save data found</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHARACTER NAMING MODAL -->
+    <div class="modal-overlay" id="name-modal" style="display: none;">
+      <div class="clean-modal">
+        <h3>Welcome, Exchange Student!</h3>
+        <p>Enter your English name to begin your Mandarin adventure in Taiwan:</p>
+        <input type="text" class="clean-input" id="player-name-input" maxlength="20" placeholder="e.g. Alex (or press Enter)">
+        <div class="modal-actions">
+          <button class="hud-btn" id="btn-name-cancel">Cancel</button>
+          <button class="btn-primary-action" id="btn-name-confirm" style="padding: 10px 24px; font-size: 14px;">Embark →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHAPTER INTRO CINEMA OVERLAY -->
+    <div class="chapter-cinema-overlay" id="chapter-cinema" style="display: none;">
+      <div class="cinema-card">
+        <div class="cinema-badge" id="cinema-badge">CHAPTER 1</div>
+        <h2 class="cinema-title-zh" id="cinema-title-zh">欢迎你来台湾！</h2>
+        <div class="cinema-title-pinyin" id="cinema-title-pinyin">Huānyíng nǐ lái Táiwān!</div>
+        <div class="cinema-title-en" id="cinema-title-en">Arrival at the Courtyard</div>
+        <p class="cinema-narrative" id="cinema-narrative">
+          You have just arrived at the Academy Courtyard in Taiwan as a new exchange student. Greet the welcoming committee, introduce yourself, and share your preferences over a cup of Oolong tea to earn your Courtyard Pass.
+        </p>
+        <button class="cinema-btn" id="cinema-start-btn">Enter Courtyard →</button>
+      </div>
+    </div>
+
+    <!-- STORY DIALOGUE BOX -->
+    <div class="dialogue-overlay" id="dialogue-modal" style="display: none;">
+      <div class="dialogue-container">
+        <div class="dialogue-speaker-tag">
+          <span class="speaker-zh" id="dialogue-speaker-zh">李明华</span>
+          <span class="speaker-pinyin" id="dialogue-speaker-pinyin">Lǐ Mínghuá</span>
+        </div>
+        <div class="dialogue-line-content">
+          <div class="dialogue-text-zh" id="dialogue-text-zh">请问你是陈月美小姐吗？</div>
+          <div class="dialogue-text-pinyin" id="dialogue-text-pinyin">Qǐngwèn nǐ shì Chén Yuèměi xiǎojiě ma?</div>
+          <div class="dialogue-text-en" id="dialogue-text-en">Excuse me, are you Miss Chen Yuemei?</div>
+        </div>
+        <div class="dialogue-footer">
+          <button class="dialogue-toggle-en" id="dialogue-toggle-en">[Show English Translation]</button>
+          <button class="dialogue-next-btn" id="dialogue-next-btn">Next [Space / Enter] ➔</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- OBSTACLE CHALLENGE MODAL (QUESTIONS & 4 ANSWERS) -->
+    <div class="challenge-overlay" id="challenge-modal" style="display: none;">
+      <div class="challenge-modal">
+        <div class="challenge-header">
+          <span class="challenge-badge" id="challenge-location">Courtyard Gate</span>
+          <button class="challenge-hint-btn" id="challenge-codex-hint">
+            📖 <span>Look up in Codex</span>
+          </button>
+        </div>
+        <div class="challenge-context" id="challenge-context">
+          The gatekeeper asks if you are feeling well after your long journey. Choose the natural affirmative response using 很.
+        </div>
+        <div class="challenge-question-card">
+          <div class="challenge-question-zh" id="challenge-question-zh">你好吗？</div>
+        </div>
+        <div class="challenge-options-grid" id="challenge-options-grid">
+          <!-- Populated dynamically with 4 Chinese-only options -->
+        </div>
+      </div>
+    </div>
+
+    <!-- TRY-AGAIN CHECKPOINT SCREEN -->
+    <div class="try-again-overlay" id="try-again-modal" style="display: none;">
+      <div class="try-again-card">
+        <div class="try-again-seal">再试一次</div>
+        <h3 class="try-again-title">Not quite right yet!</h3>
+        <p class="try-again-text">
+          Mandarin grammar and word choices follow specific patterns. Don't worry—review the rule in your Codex and try this challenge again!
+        </p>
+        <div class="try-again-hint" id="try-again-hint">
+          💡 Hint: Check your Codex under Lesson 1 Grammar.
+        </div>
+        <div class="try-again-actions">
+          <button class="hud-btn" id="try-again-codex-btn">📖 Open Codex</button>
+          <button class="btn-primary-action" id="try-again-retry-btn" style="padding: 10px 24px; font-size: 14px;">Retry Checkpoint ➔</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- GRADUATION SUMMARY FINALE MODAL -->
+    <div class="graduation-overlay" id="graduation-modal" style="display: none;">
+      <div class="graduation-scroll">
+        <div class="graduation-ribbon">Course Completed</div>
+        <h2 class="graduation-title-zh">华语结业证书</h2>
+        <div class="graduation-subtitle" id="grad-student-name">Congratulations, Scholar!</div>
+
+        <div class="graduation-stats-grid">
+          <div class="grad-stat-box">
+            <div class="grad-stat-num">3 / 3</div>
+            <div class="grad-stat-label">Chapters Finished</div>
+          </div>
+          <div class="grad-stat-box">
+            <div class="grad-stat-num">15 / 15</div>
+            <div class="grad-stat-label">Calligraphy Obstacles</div>
+          </div>
+          <div class="grad-stat-box">
+            <div class="grad-stat-num">120</div>
+            <div class="grad-stat-label">Vocabulary Mastered</div>
+          </div>
+        </div>
+
+        <p style="font-size: 15px; line-height: 1.6; color: var(--color-ink-light); margin-bottom: 30px;">
+          You have mastered basic greetings, family descriptions, numbers, activities, and daily conversational grammar. You are ready to explore the Mandarin-speaking world!
+        </p>
+
+        <div class="graduation-actions">
+          <button class="hud-btn" id="grad-codex-btn">📖 Review Codex</button>
+          <button class="btn-primary-action" id="grad-restart-btn" style="padding: 12px 28px; font-size: 15px;">Return to Title Screen</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Game Data Scripts -->
+  <script src="data/vocabGrammar.js"></script>
+  <script src="data/chapters.js"></script>
+
+  <!-- Modular Game Scripts -->
+  <script src="js/saveManager.js"></script>
+  <script src="js/textRenderer.js"></script>
+  <script src="js/codex.js"></script>
+  <script src="js/writingBox.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
