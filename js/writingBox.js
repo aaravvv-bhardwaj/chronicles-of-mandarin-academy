@@ -168,6 +168,7 @@
             writer: null,
             completed: false
           });
+
         }
 
         this.notebook.appendChild(cell);
@@ -196,8 +197,51 @@
           drawingWidth: 20,
           strokeColor: '#333',
           outlineColor: '#DDD',
-          highlightColor: '#AAF'
+          highlightColor: '#AAF',
+          charDataLoader: (char, onSuccess, onError) => {
+            // Try local data/strokes/<char>.json first (offline-capable)
+            const localUrl = `data/strokes/${char}.json`;
+            const req = new XMLHttpRequest();
+            req.overrideMimeType && req.overrideMimeType("application/json");
+            req.open("GET", localUrl, true);
+            req.onload = () => {
+              if (req.status === 200) {
+                try {
+                  onSuccess(JSON.parse(req.responseText));
+                } catch (e) {
+                  // Local file corrupt; fall back to CDN
+                  loadFromCDN(char, onSuccess, onError);
+                }
+              } else {
+                loadFromCDN(char, onSuccess, onError);
+              }
+            };
+            req.onerror = () => loadFromCDN(char, onSuccess, onError);
+            req.send(null);
+          },
+          onLoadCharDataError: (err) => {
+            console.error(`WritingBox: failed to load stroke data for "${char}":`, err);
+          },
+          onLoadCharDataSuccess: () => {}
         };
+
+        function loadFromCDN(char, onSuccess, onError) {
+          const cdnUrl = `https://cdn.jsdelivr.net/npm/hanzi-writer-data@2.0/${encodeURIComponent(char)}.json`;
+          const req = new XMLHttpRequest();
+          req.overrideMimeType && req.overrideMimeType("application/json");
+          req.open("GET", cdnUrl, true);
+          req.onload = () => {
+            if (req.status === 200) {
+              try {
+                onSuccess(JSON.parse(req.responseText));
+              } catch (e) { onError(req, e); }
+            } else {
+              onError(req, new Error(`HTTP ${req.status}`));
+            }
+          };
+          req.onerror = onError;
+          req.send(null);
+        }
 
         if (this.guidedMode) {
           options.showHintAfterMisses = 1;

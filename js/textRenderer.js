@@ -181,9 +181,82 @@ window.TextRenderer = (function () {
   }
 
   /**
+   * Pick the best Mandarin voice for synthesis.
+   * Filters all Chinese voices and strictly prioritizes offline local voices
+   * (v.localService === true), preferring zh-TW or zh-CN. Falls back to cloud
+   * voices only when no local Chinese voice exists.
+   * @returns {SpeechSynthesisVoice|null}
+   */
+  function _pickChineseVoice() {
+    var voices = window.speechSynthesis.getVoices() || [];
+    var chinese = voices.filter(function (v) {
+      return String(v.lang || '').toLowerCase().startsWith('zh');
+    });
+
+    var local = chinese.filter(function (v) {
+      return v.localService === true;
+    });
+    var cloud = chinese.filter(function (v) {
+      return v.localService !== true;
+    });
+
+    /** Among a list of voices, prefer zh-TW / zh-CN, else the first. */
+    var best = function (list) {
+      for (var i = 0; i < list.length; i++) {
+        var lang = String(list[i].lang || '').toLowerCase();
+        if (lang === 'zh-tw' || lang === 'zh-cn') return list[i];
+      }
+      return list[0];
+    };
+
+    return best(local) || best(cloud) || null;
+  }
+
+  /** Play a pleasant soft two-note chime via the Web Audio API. */
+  function _playOfflineChime() {
+    try {
+      var AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      var ctx = new AudioContext();
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(660, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.07, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.3);
+    } catch (e) {}
+  }
+
+  /** Show a subtle non-intrusive toast tooltip that fades away on its own. */
+  function _showToast(message) {
+    var el = document.createElement('div');
+    el.className = 'voice-toast';
+    el.textContent = message;
+    el.style.opacity = '0';
+    document.body.appendChild(el);
+    // Kick into view, then fade out and remove after a short delay.
+    requestAnimationFrame(function () {
+      el.style.opacity = '1';
+      setTimeout(function () {
+        el.style.opacity = '0';
+        setTimeout(function () {
+          if (el.parentNode) el.parentNode.removeChild(el);
+        }, 300);
+      }, 2200);
+    });
+  }
+
+  /**
    * Speak Mandarin text via window.speechSynthesis.
-   * Prefers zh-TW / zh-CN voices at rate 0.85, cancels overlapping speech,
-   * and briefly highlights the active button while speaking.
+   * Prefers offline local zh-TW / zh-CN voices at rate 0.85, cancels
+   * overlapping speech, and briefly highlights the active button while
+   * speaking. On synthesis failure (e.g. no offline voice pack installed),
+   * plays a soft chime and shows a subtle toast instead of failing silently.
    *
    * @param {string} text      Chinese text to speak
    * @param {Element} buttonEl the 🔊 button being spoken (highlighted)
@@ -198,28 +271,22 @@ window.TextRenderer = (function () {
     utter.lang = 'zh-TW';
     utter.rate = 0.85;
 
-    try {
-      var voices = window.speechSynthesis.getVoices() || [];
-      var voice =
-        voices.find(function (v) {
-          return /zh-TW/i.test(v.lang);
-        }) ||
-        voices.find(function (v) {
-          return /zh-CN/i.test(v.lang);
-        }) ||
-        voices.find(function (v) {
-          return /^zh/i.test(v.lang);
-        });
-      if (voice) utter.voice = voice;
-    } catch (e) {}
+    var voice = _pickChineseVoice();
+    if (voice) utter.voice = voice;
 
     if (buttonEl) {
       buttonEl.classList.add('speaking');
       _speakingBtn = buttonEl;
     }
 
-    utter.onend = utter.onerror = function () {
+    utter.onend = function () {
       _clearSpeakingHighlight();
+    };
+
+    utter.onerror = function () {
+      _clearSpeakingHighlight();
+      _playOfflineChime();
+      _showToast('Offline voice pack not installed on this PC — connect Wi-Fi for cloud voice');
     };
 
     window.speechSynthesis.speak(utter);

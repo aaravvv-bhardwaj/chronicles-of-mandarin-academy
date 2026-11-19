@@ -5,16 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>华语学堂: 台湾行 — Mandarin Journey RPG</title>
 
-  <!-- Google Fonts: Noto Sans SC, Noto Serif SC, Ma Shan Zheng -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@600;700;900&display=swap" rel="stylesheet">
+  <!-- Local system CJK fonts (no CDN) -->
+<style>
+  :root {
+    --font-serif: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
+    --font-sans: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-cursive: 'Ma Shan Zheng', cursive, var(--font-serif);
+  }
+</style>
 
-  <!-- Phaser 3 CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+  <!-- Phaser 3 (local copy, offline-capable) -->
+  <script src="js/lib/phaser.min.js"></script>
 
-  <!-- Hanzi Writer v3.5 CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
+  <!-- Hanzi Writer v3.5 (local copy, offline-capable) -->
+  <script src="js/lib/hanzi-writer.min.js"></script>
 
   <!-- Main Stylesheet -->
   <link rel="stylesheet" href="style.css">

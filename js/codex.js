@@ -160,8 +160,50 @@ window.Codex = (function () {
         drawingColor: '#b93a26',
         drawingWidth: 16,
         highlightColor: '#f59e0b',
-        showHintAfterMisses: 1
+        showHintAfterMisses: 1,
+        charDataLoader: (c, onSuccess, onError) => {
+          // Try local data/strokes/<char>.json first (offline-capable)
+          const localUrl = `data/strokes/${c}.json`;
+          const req = new XMLHttpRequest();
+          req.overrideMimeType && req.overrideMimeType("application/json");
+          req.open("GET", localUrl, true);
+          req.onload = () => {
+            if (req.status === 200) {
+              try {
+                onSuccess(JSON.parse(req.responseText));
+              } catch (e) {
+                loadFromCDN(c, onSuccess, onError);
+              }
+            } else {
+              loadFromCDN(c, onSuccess, onError);
+            }
+          };
+          req.onerror = () => loadFromCDN(c, onSuccess, onError);
+          req.send(null);
+        },
+        onLoadCharDataError: (err) => {
+          console.error(`Codex: failed to load stroke data for "${char}":`, err);
+        },
+        onLoadCharDataSuccess: () => {}
       });
+
+      function loadFromCDN(c, onSuccess, onError) {
+        const cdnUrl = `https://cdn.jsdelivr.net/npm/hanzi-writer-data@2.0/${encodeURIComponent(c)}.json`;
+        const req = new XMLHttpRequest();
+        req.overrideMimeType && req.overrideMimeType("application/json");
+        req.open("GET", cdnUrl, true);
+        req.onload = () => {
+          if (req.status === 200) {
+            try {
+              onSuccess(JSON.parse(req.responseText));
+            } catch (e) { onError(req, e); }
+          } else {
+            onError(req, new Error(`HTTP ${req.status}`));
+          }
+        };
+        req.onerror = onError;
+        req.send(null);
+      }
 
       // Default: play stroke order animation
       strokeWriter.animateCharacter({

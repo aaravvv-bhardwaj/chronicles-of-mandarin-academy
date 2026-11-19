@@ -1764,3 +1764,24 @@ rgin-bottom: 18px;
   gap: 14px;
   justify-content: center;
 }
+
+/* Non-intrusive offline-voice toast tooltip */
+.voice-toast {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  padding: 8px 16px;
+  border-radius: 20px;
+  background: rgba(31, 29, 26, 0.88);
+  color: #f7f3ea;
+  font-size: 13px;
+  border: 1px solid rgba(220, 211, 195, 0.35);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
